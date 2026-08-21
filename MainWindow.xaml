@@ -1,0 +1,498 @@
+<Window x:Class="VramTaskManager.MainWindow"
+        x:Name="RootWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:VramTaskManager"
+        xmlns:vm="clr-namespace:VramTaskManager.ViewModels"
+        xmlns:models="clr-namespace:VramTaskManager.Models"
+        mc:Ignorable="d"
+        Title="VRAM Task Manager"
+        Height="820" Width="1200"
+        MinHeight="600" MinWidth="900"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource BgCanvasBrush}"
+        Foreground="{StaticResource TextPrimaryBrush}"
+        FontFamily="Segoe UI">
+
+    <Window.DataContext>
+        <vm:MainViewModel />
+    </Window.DataContext>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <!-- Hardware Telemetry Dashboard -->
+            <RowDefinition Height="Auto" />
+            <!-- Toolbar & Filter Controls -->
+            <RowDefinition Height="Auto" />
+            <!-- Process DataGrid -->
+            <RowDefinition Height="*" />
+            <!-- Status Bar -->
+            <RowDefinition Height="30" />
+        </Grid.RowDefinitions>
+
+        <!-- 1. HARDWARE TELEMETRY DASHBOARD -->
+        <Border Grid.Row="0" Background="{StaticResource BgCanvasBrush}" Padding="16,12,16,12" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <!-- Top Bar Info / GPU Device Badge -->
+                <Grid Grid.Row="0" Margin="0,0,0,10">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Background="{StaticResource AccentPrimaryBrush}" CornerRadius="3" Width="20" Height="20" Margin="0,0,10,0">
+                            <TextBlock Text="V" Foreground="#ffffff" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <TextBlock Text="GPU Telemetry" FontWeight="Bold" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
+                        <Border Background="#2d2d2d" BorderBrush="#3c3c3c" BorderThickness="1" CornerRadius="3" Margin="14,0,0,0" Padding="8,2">
+                            <TextBlock Text="{Binding GpuName}" FontSize="11" Foreground="#9cdcfe" VerticalAlignment="Center" />
+                        </Border>
+                        <Border Background="#252526" BorderBrush="#333333" BorderThickness="1" CornerRadius="3" Margin="6,0,0,0" Padding="6,2">
+                            <TextBlock Text="{Binding DriverVersion, StringFormat='Driver: {0}'}" FontSize="11" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
+                        </Border>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Telemetry Cards Row -->
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <!-- Main VRAM Gauge Card -->
+                        <ColumnDefinition Width="2.4*" />
+                        <!-- GPU Core Util Card -->
+                        <ColumnDefinition Width="1*" />
+                        <!-- Mem Controller Util Card -->
+                        <ColumnDefinition Width="1*" />
+                        <!-- GPU Temp Card -->
+                        <ColumnDefinition Width="1*" />
+                        <!-- Power Draw Card -->
+                        <ColumnDefinition Width="1*" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Main VRAM Allocation Card -->
+                    <Border Grid.Column="0" Background="{StaticResource BgCardBrush}" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="4" Padding="14,10" Margin="0,0,10,0">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <Grid Grid.Row="0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="DEDICATED VIDEO MEMORY (VRAM)" FontSize="11" FontWeight="Bold" Foreground="{StaticResource TextMutedBrush}" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <TextBlock Text="{Binding UsedVramMb, StringFormat='{}{0:F0} MB'}" FontWeight="Bold" FontSize="14" Foreground="{Binding VramUsagePercentage, Converter={StaticResource VramUsageToBrushConverter}}" />
+                                    <TextBlock Text="{Binding TotalVramMb, StringFormat=' / {0:F0} MB'}" FontSize="13" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Bottom" Margin="0,0,6,0" />
+                                    <Border Background="#1f1f1f" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="3" Padding="5,1">
+                                        <TextBlock Text="{Binding VramUsagePercentage, StringFormat='{}{0:F1}%'}" FontWeight="Bold" FontSize="11" Foreground="{Binding VramUsagePercentage, Converter={StaticResource VramUsageToBrushConverter}}" />
+                                    </Border>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Modern Styled Progress Bar -->
+                            <Border Grid.Row="1" Background="#1f1f1f" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="3" Height="10" Margin="0,10,0,8" ClipToBounds="True">
+                                <ProgressBar Value="{Binding VramUsagePercentage, Mode=OneWay}" Minimum="0" Maximum="100" BorderThickness="0" Background="Transparent" Foreground="{Binding VramUsagePercentage, Converter={StaticResource VramUsageToBrushConverter}}" />
+                            </Border>
+
+                            <Grid Grid.Row="2">
+                                <TextBlock Text="{Binding FreeVramMb, StringFormat='Available VRAM: {0:F0} MB'}" FontSize="11" Foreground="{StaticResource AccentSuccessBrush}" />
+                                <TextBlock Text="{Binding TotalTrackedVramMb, StringFormat='Tracked by Processes: {0:F0} MB'}" FontSize="11" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Right" />
+                            </Grid>
+                        </Grid>
+                    </Border>
+
+                    <!-- GPU Core Utilization -->
+                    <Border Grid.Column="1" Background="{StaticResource BgCardBrush}" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="4" Padding="12,10" Margin="0,0,10,0">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="GPU CORE" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextMutedBrush}" />
+                            <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,4,0,0">
+                                <TextBlock Text="{Binding GpuCoreUtil, StringFormat='{}{0}%'}" FontSize="20" FontWeight="Bold" Foreground="#4ec9b0" />
+                                <ProgressBar Value="{Binding GpuCoreUtil, Mode=OneWay}" Minimum="0" Maximum="100" Height="4" Background="#1f1f1f" Foreground="#4ec9b0" BorderThickness="0" Margin="0,6,0,0" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Memory Controller / Bus Utilization -->
+                    <Border Grid.Column="2" Background="{StaticResource BgCardBrush}" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="4" Padding="12,10" Margin="0,0,10,0">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="MEM BUS" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextMutedBrush}" />
+                            <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,4,0,0">
+                                <TextBlock Text="{Binding GpuMemUtil, StringFormat='{}{0}%'}" FontSize="20" FontWeight="Bold" Foreground="#dcdcaa" />
+                                <ProgressBar Value="{Binding GpuMemUtil, Mode=OneWay}" Minimum="0" Maximum="100" Height="4" Background="#1f1f1f" Foreground="#dcdcaa" BorderThickness="0" Margin="0,6,0,0" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Temperature -->
+                    <Border Grid.Column="3" Background="{StaticResource BgCardBrush}" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="4" Padding="12,10" Margin="0,0,10,0">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="TEMPERATURE" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextMutedBrush}" />
+                            <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,4,0,0">
+                                <TextBlock Text="{Binding GpuTemperature, StringFormat='{}{0} °C'}" FontSize="20" FontWeight="Bold" Foreground="#ce9178" />
+                                <TextBlock Text="Thermal Load" FontSize="10" Foreground="{StaticResource TextMutedBrush}" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Power Consumption -->
+                    <Border Grid.Column="4" Background="{StaticResource BgCardBrush}" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="4" Padding="12,10">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="POWER DRAW" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextMutedBrush}" />
+                            <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,4,0,0">
+                                <TextBlock Text="{Binding GpuPowerWatts, StringFormat='{}{0} W'}" FontSize="20" FontWeight="Bold" Foreground="#c586c0" />
+                                <TextBlock Text="Board Power" FontSize="10" Foreground="{StaticResource TextMutedBrush}" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- 2. TOOLBAR & FILTER CONTROLS -->
+        <Border Grid.Row="1" Background="{StaticResource BgHeaderBrush}" Padding="16,10" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <!-- Search Box -->
+                    <ColumnDefinition Width="260" />
+                    <!-- Filter Options -->
+                    <ColumnDefinition Width="*" />
+                    <!-- Quick Actions -->
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Search Input -->
+                <Grid Grid.Column="0">
+                    <TextBox Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
+                             Style="{StaticResource VsTextBox}"
+                             Height="30" Padding="8,4" />
+                    <TextBlock Text="Search process or PID..."
+                               IsHitTestVisible="False"
+                               Foreground="{StaticResource TextMutedBrush}"
+                               FontSize="11"
+                               VerticalAlignment="Center"
+                               Margin="10,0,0,0">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SearchQuery}" Value="">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding SearchQuery}" Value="{x:Null}">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
+
+                <!-- Min VRAM Threshold ComboBox -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="20,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="VRAM:" FontSize="11" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <ComboBox SelectedIndex="{Binding SelectedVramThresholdIndex}" Height="28" Width="120" VerticalAlignment="Center" VerticalContentAlignment="Center">
+                        <ComboBoxItem Content="All (>0 MB)" />
+                        <ComboBoxItem Content="> 10 MB" />
+                        <ComboBoxItem Content="> 50 MB" />
+                        <ComboBoxItem Content="> 100 MB" />
+                        <ComboBoxItem Content="> 500 MB" />
+                        <ComboBoxItem Content="> 1 GB" />
+                    </ComboBox>
+                </StackPanel>
+
+                <!-- Quick Action Buttons -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <Button Command="{Binding KillBatchSelectedCommand}" Content="End Selected" Style="{StaticResource VsDangerButton}" Height="30" Padding="14,0" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- 3. PROCESS DATAGRID -->
+        <Border Grid.Row="2" Background="{StaticResource BgCanvasBrush}">
+            <DataGrid ItemsSource="{Binding FilteredProcesses}"
+                      SelectedItem="{Binding SelectedProcess, Mode=TwoWay}"
+                      AutoGenerateColumns="False"
+                      CanUserAddRows="False"
+                      CanUserDeleteRows="False"
+                      CanUserResizeRows="False"
+                      CanUserSortColumns="True"
+                      SelectionMode="Single"
+                      SelectionUnit="FullRow"
+                      Background="{StaticResource BgCanvasBrush}"
+                      Foreground="{StaticResource TextSecondaryBrush}"
+                      RowBackground="{StaticResource BgCanvasBrush}"
+                      AlternatingRowBackground="#242424"
+                      GridLinesVisibility="Horizontal"
+                      HorizontalGridLinesBrush="{StaticResource BorderSubtleBrush}"
+                      VerticalGridLinesBrush="Transparent"
+                      BorderThickness="0"
+                      HeadersVisibility="Column"
+                      RowHeight="44"
+                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                      ScrollViewer.VerticalScrollBarVisibility="Auto">
+
+                <DataGrid.Resources>
+                    <!-- Column Header Style with Dynamic Sort Glyphs -->
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="Background" Value="{StaticResource BgHeaderBrush}" />
+                        <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+                        <Setter Property="FontWeight" Value="SemiBold" />
+                        <Setter Property="FontSize" Value="11" />
+                        <Setter Property="Padding" Value="12,10" />
+                        <Setter Property="BorderThickness" Value="0,0,1,1" />
+                        <Setter Property="BorderBrush" Value="{StaticResource BorderSubtleBrush}" />
+                        <Setter Property="Cursor" Value="Hand" />
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="DataGridColumnHeader">
+                                    <Border Background="{TemplateBinding Background}"
+                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                            Padding="{TemplateBinding Padding}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <ContentPresenter Grid.Column="0"
+                                                              HorizontalAlignment="Left"
+                                                              VerticalAlignment="Center" />
+                                            <!-- Sort Direction Arrow Glyph -->
+                                            <Path x:Name="SortArrow"
+                                                  Grid.Column="1"
+                                                  Fill="#007acc"
+                                                  Width="8" Height="6"
+                                                  Margin="6,0,0,0"
+                                                  VerticalAlignment="Center"
+                                                  Stretch="Fill"
+                                                  Visibility="Collapsed" />
+                                        </Grid>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="SortDirection" Value="Ascending">
+                                            <Setter TargetName="SortArrow" Property="Visibility" Value="Visible" />
+                                            <Setter TargetName="SortArrow" Property="Data" Value="M 0 6 L 4 0 L 8 6 Z" />
+                                        </Trigger>
+                                        <Trigger Property="SortDirection" Value="Descending">
+                                            <Setter TargetName="SortArrow" Property="Visibility" Value="Visible" />
+                                            <Setter TargetName="SortArrow" Property="Data" Value="M 0 0 L 4 6 L 8 0 Z" />
+                                        </Trigger>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Foreground" Value="#ffffff" />
+                                            <Setter Property="Background" Value="#2d2d2d" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+
+                    <!-- Cell Style -->
+                    <Style TargetType="DataGridCell">
+                        <Setter Property="Padding" Value="12,0" />
+                        <Setter Property="BorderThickness" Value="0" />
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="DataGridCell">
+                                    <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+                                        <ContentPresenter VerticalAlignment="Center" />
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                        <Style.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Background" Value="#094771" />
+                                <Setter Property="Foreground" Value="#ffffff" />
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+
+                    <!-- Row Style with Context Menu -->
+                    <Style TargetType="DataGridRow">
+                        <Setter Property="MinHeight" Value="44" />
+                        <Setter Property="SnapsToDevicePixels" Value="True" />
+                        <Setter Property="ContextMenu">
+                            <Setter.Value>
+                                <ContextMenu>
+                                    <MenuItem Header="End Task"
+                                              Command="{Binding DataContext.KillProcessCommand, Source={x:Reference RootWindow}}"
+                                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                              Foreground="#f14c4c" FontWeight="SemiBold" />
+                                    <MenuItem Header="Open File Location"
+                                              Command="{Binding DataContext.OpenProcessLocationCommand, Source={x:Reference RootWindow}}"
+                                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                    <MenuItem Header="Copy Process Details"
+                                              Command="{Binding DataContext.CopyProcessInfoCommand, Source={x:Reference RootWindow}}"
+                                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                </ContextMenu>
+                            </Setter.Value>
+                        </Setter>
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#2a2d2e" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Background" Value="#094771" />
+                                <Setter Property="Foreground" Value="#ffffff" />
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGrid.Resources>
+
+                <DataGrid.InputBindings>
+                    <KeyBinding Key="Delete" Command="{Binding KillProcessCommand}" CommandParameter="{Binding SelectedProcess}" />
+                </DataGrid.InputBindings>
+
+                <DataGrid.Columns>
+                    <!-- Multi-Select CheckBox -->
+                    <DataGridTemplateColumn Width="45" CanUserSort="False">
+                        <DataGridTemplateColumn.Header>
+                            <CheckBox Click="HeaderCheckBox_Click" HorizontalAlignment="Center" />
+                        </DataGridTemplateColumn.Header>
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          IsEnabled="{Binding IsSystemProtected, Converter={StaticResource InverseBooleanConverter}}"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <!-- Process Icon & Name -->
+                    <DataGridTemplateColumn Header="PROCESS NAME" Width="2.2*" CanUserSort="True" SortMemberPath="ProcessName">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" ToolTip="{Binding ExecutablePath}" VerticalAlignment="Center" Margin="0,3">
+                                    <Image Source="{Binding Icon}" Width="20" Height="20" Margin="0,0,12,0" RenderOptions.BitmapScalingMode="HighQuality"
+                                           VerticalAlignment="Center"
+                                           Visibility="{Binding Icon, Converter={StaticResource NullToVisibilityConverter}}" />
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding ProcessName}" FontWeight="SemiBold" Foreground="#ffffff" FontSize="12" Margin="0,0,0,2" />
+                                        <TextBlock Text="{Binding WindowTitle}" FontSize="10" Foreground="{StaticResource TextMutedBrush}"
+                                                   Visibility="{Binding WindowTitle, Converter={StaticResource NullToVisibilityConverter}}"
+                                                   TextTrimming="CharacterEllipsis" MaxWidth="400" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <!-- PID -->
+                    <DataGridTextColumn Header="PID" Binding="{Binding Pid}" Width="85" CanUserSort="True" SortMemberPath="Pid">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="FontFamily" Value="Consolas" />
+                                <Setter Property="Foreground" Value="#9cdcfe" />
+                                <Setter Property="VerticalAlignment" Value="Center" />
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <!-- Dedicated VRAM -->
+                    <DataGridTemplateColumn Header="DEDICATED VRAM" Width="2*" CanUserSort="True" SortMemberPath="DedicatedVramBytes" SortDirection="Descending">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,0,12,0" VerticalAlignment="Center">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="90" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="50" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{Binding FormattedVram}" FontWeight="Bold" Foreground="{Binding VramPercentage, Converter={StaticResource VramUsageToBrushConverter}}" VerticalAlignment="Center" />
+                                    
+                                    <!-- Mini Inline Gauge Bar -->
+                                    <Border Grid.Column="1" Background="#181818" BorderBrush="#333333" BorderThickness="1" CornerRadius="2" Height="8" Margin="8,0" VerticalAlignment="Center">
+                                        <ProgressBar Value="{Binding VramPercentage, Mode=OneWay}" Minimum="0" Maximum="100" BorderThickness="0" Background="Transparent" Foreground="{Binding VramPercentage, Converter={StaticResource VramUsageToBrushConverter}}" />
+                                    </Border>
+
+                                    <TextBlock Grid.Column="2" Text="{Binding VramPercentage, StringFormat='{}{0:F1}%'}" FontSize="10" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                </Grid>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <!-- System RAM (Working Set) -->
+                    <DataGridTextColumn Header="RAM" Binding="{Binding FormattedRam}" Width="140" CanUserSort="True" SortMemberPath="SystemRamMb">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="#cccccc" />
+                                <Setter Property="VerticalAlignment" Value="Center" />
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+
+        <!-- 4. STATUS BAR -->
+        <Border Grid.Row="3" Background="{StaticResource BgHeaderBrush}" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="0,1,0,0" Padding="16,0">
+            <Grid VerticalAlignment="Center">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <TextBlock Text="{Binding FilteredProcessesCount, StringFormat='Showing: {0} processes'}" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
+                    <TextBlock Text="{Binding TotalProcessesCount, StringFormat=' (Total: {0})'}" FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <TextBlock Text="{Binding TotalTrackedVramMb, StringFormat='Process VRAM Sum: {0:F0} MB'}" FontSize="11" Foreground="#9cdcfe" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- 5. CONFIRMATION MODAL OVERLAY -->
+        <Grid Grid.Row="0" Grid.RowSpan="4" Background="#aa000000"
+              Visibility="{Binding IsConfirmModalVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Border Background="{StaticResource BgCardBrush}" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="5" Width="480" VerticalAlignment="Center" HorizontalAlignment="Center" Padding="20">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Modal Header -->
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,14">
+                        <Border Background="#4a1c1c" BorderBrush="#f14c4c" BorderThickness="1" CornerRadius="3" Width="24" Height="24" Margin="0,0,10,0">
+                            <TextBlock Text="!" Foreground="#f14c4c" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <TextBlock Text="{Binding ConfirmModalTitle}" FontSize="15" FontWeight="Bold" Foreground="#ffffff" VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <!-- Modal Message -->
+                    <TextBlock Grid.Row="1" Text="{Binding ConfirmModalMessage}" TextWrapping="Wrap" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" LineHeight="18" Margin="0,0,0,20" />
+
+                    <!-- Modal Buttons -->
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Command="{Binding ConfirmModalCancelCommand}" Content="Cancel" Style="{StaticResource VsSecondaryButton}" Width="80" Margin="0,0,10,0" />
+                        <Button Command="{Binding ConfirmModalAcceptCommand}" Content="{Binding ConfirmModalActionText}" Style="{StaticResource VsButton}" MinWidth="110" Padding="12,6" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>
