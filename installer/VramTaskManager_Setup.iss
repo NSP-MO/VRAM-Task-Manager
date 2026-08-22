@@ -1,7 +1,7 @@
 ; Inno Setup 6 Script with Automated .NET 8.0 Desktop Runtime Detection & Installation
 
 #define MyAppName "VRAM Task Manager"
-#define MyAppVersion "0.1.0"
+#define MyAppVersion "0.1.1"
 #define MyAppPublisher "NSP-MO"
 #define MyAppURL "https://github.com/NSP-MO/vram-manager"
 #define MyAppExeName "VramTaskManager.exe"
@@ -21,7 +21,7 @@ DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 
 OutputDir=output
-OutputBaseFilename=VramTaskManager_Setup_v0.1.0_x64
+OutputBaseFilename=VramTaskManager_Setup_v0.1.1_x64
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
@@ -108,38 +108,69 @@ begin
   end;
 end;
 
+// Function to download a file using curl or PowerShell
+function DownloadRuntimeInstaller(const DownloadUrl, DestinationPath: string): Boolean;
+var
+  CurlPath: string;
+  PowerShellPath: string;
+  PowerShellCmd: string;
+  ResultCode: Integer;
+begin
+  Result := False;
+
+  // Attempt 1: Built-in curl.exe (available natively on Windows 10/11)
+  CurlPath := ExpandConstant('{sys}\curl.exe');
+  if FileExists(CurlPath) then
+  begin
+    if Exec(CurlPath, Format('-L -f --retry 3 --connect-timeout 15 -o "%s" "%s"', [DestinationPath, DownloadUrl]), '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+    begin
+      if (ResultCode = 0) and FileExists(DestinationPath) then
+      begin
+        Result := True;
+        Exit;
+      end;
+    end;
+  end;
+
+  // Attempt 2: Fallback to PowerShell WebClient
+  PowerShellPath := ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe');
+  PowerShellCmd := Format('-NoProfile -ExecutionPolicy Bypass -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; (New-Object Net.WebClient).DownloadFile(''%s'', ''%s'')"', [DownloadUrl, DestinationPath]);
+  
+  if Exec(PowerShellPath, PowerShellCmd, '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+  begin
+    if (ResultCode = 0) and FileExists(DestinationPath) then
+    begin
+      Result := True;
+      Exit;
+    end;
+  end;
+end;
+
 // Function to download and install .NET 8.0 Desktop Runtime automatically
 function DownloadAndInstallDotNet8(): Boolean;
 var
   DownloadUrl: string;
   InstallerPath: string;
   ResultCode: Integer;
-  PowerShellCmd: string;
 begin
   DownloadUrl := 'https://aka.ms/dotnet/8.0/windowsdesktop-runtime-win-x64.exe';
   InstallerPath := ExpandConstant('{tmp}\windowsdesktop-runtime-8.0-win-x64.exe');
 
-  WizardForm.StatusLabel.Caption := 'Downloading Microsoft .NET 8.0 Desktop Runtime...';
-
-  // Download official Microsoft runtime installer using PowerShell
-  PowerShellCmd := Format('-NoProfile -ExecutionPolicy Bypass -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; (New-Object Net.WebClient).DownloadFile(''%s'', ''%s'')"', [DownloadUrl, InstallerPath]);
-  
-  if not Exec('powershell.exe', PowerShellCmd, '', SW_HIDE, ewWaitUntilTerminated, ResultCode) or (ResultCode <> 0) or (not FileExists(InstallerPath)) then
+  // Step 1: Download Microsoft runtime installer
+  if not DownloadRuntimeInstaller(DownloadUrl, InstallerPath) then
   begin
     Result := False;
     Exit;
   end;
 
-  WizardForm.StatusLabel.Caption := 'Installing Microsoft .NET 8.0 Desktop Runtime...';
-
-  // Execute silent installation of .NET Runtime
-  if not Exec(InstallerPath, '/install /quiet /norestart', '', SW_SHOW, ewWaitUntilTerminated, ResultCode) then
+  // Step 2: Execute silent installation of .NET Runtime
+  if not Exec(InstallerPath, '/install /quiet /norestart', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
   begin
     Result := False;
     Exit;
   end;
 
-  // Check exit code: 0 = success, 3010 = success reboot required
+  // Step 3: Check exit code (0 = success, 3010 = success reboot required) or verify installation
   Result := (ResultCode = 0) or (ResultCode = 3010) or IsDotNet8DesktopRuntimeInstalled();
 end;
 

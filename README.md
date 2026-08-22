@@ -43,8 +43,8 @@ The application is distributed in two self-contained formats targeting 64-bit Wi
 
 | Package Type | File | Description |
 | :--- | :--- | :--- |
-| **Setup Installer** | `VramTaskManager_Setup_v0.1.0_x64.exe` | Inno Setup wizard with desktop and Start Menu shortcuts, uninstaller, and automated .NET runtime verification. |
-| **Portable Archive** | `VramTaskManager_Portable_v0.1.0_x64.zip` | Standalone archive containing all runtime binaries. Extract and run `VramTaskManager.exe` directly. |
+| **Setup Installer** | `VramTaskManager_Setup_v0.1.1_x64.exe` | Inno Setup wizard with desktop and Start Menu shortcuts, uninstaller, and automated .NET runtime verification. |
+| **Portable Archive** | `VramTaskManager_Portable_v0.1.1_x64.zip` | Standalone archive containing all runtime binaries. Extract and run `VramTaskManager.exe` directly. |
 
 ---
 
@@ -110,7 +110,7 @@ VramTaskManager/
 
 4. **Create Portable ZIP Archive**:
    ```powershell
-   Compress-Archive -Path ./publish/* -DestinationPath ./installer/output/VramTaskManager_Portable_v0.1.0_x64.zip -Force
+   Compress-Archive -Path ./publish/* -DestinationPath ./installer/output/VramTaskManager_Portable_v0.1.1_x64.zip -Force
    ```
 
 ---
