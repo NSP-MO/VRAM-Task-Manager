@@ -349,18 +349,6 @@ namespace VramTaskManager.ViewModels
             item ??= SelectedProcess;
             if (item == null) return;
 
-            if (item.IsSystemProtected && !IsRunningAsAdmin)
-            {
-                ShowConfirmModal(
-                    title: "Administrator Elevation Required",
-                    message: $"Process '{item.ProcessName}' (PID {item.Pid}) is an elevated system component and requires Administrator privileges to terminate.\n\nDo you want to elevate VRAM Task Manager to Administrator?",
-                    severity: "Warning",
-                    actionText: "Elevate to Admin",
-                    action: () => RestartAsAdmin()
-                );
-                return;
-            }
-
             if (item.IsSystemProtected)
             {
                 ShowConfirmModal(

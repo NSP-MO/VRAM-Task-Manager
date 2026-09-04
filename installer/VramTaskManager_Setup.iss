@@ -1,7 +1,7 @@
 ; Inno Setup 6 Script with Automated .NET 8.0 Desktop Runtime Detection & Installation
 
 #define MyAppName "VRAM Task Manager"
-#define MyAppVersion "0.1.1"
+#define MyAppVersion "0.1.2"
 #define MyAppPublisher "NSP-MO"
 #define MyAppURL "https://github.com/NSP-MO/vram-manager"
 #define MyAppExeName "VramTaskManager.exe"
@@ -21,7 +21,7 @@ DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 
 OutputDir=output
-OutputBaseFilename=VramTaskManager_Setup_v0.1.1_x64
+OutputBaseFilename=VramTaskManager_Setup_v0.1.2_x64
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
